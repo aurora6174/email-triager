@@ -1,0 +1,796 @@
+{
+  "id": "emailTriageMain1",
+  "name": "Email Triage",
+  "active": false,
+  "nodes": [
+    {
+      "id": "5bd20866-3478-53f7-bc79-d2aae304b443",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-triage",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {
+          "responseCode": {
+            "values": {
+              "responseCode": 202
+            }
+          }
+        }
+      },
+      "webhookId": "6d1f3c2e-5b7a-4e0f-9a51-3c9e2a7b1d40",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "triageWebhookAu1",
+          "name": "Triage webhook secret"
+        }
+      }
+    },
+    {
+      "id": "c06243dc-eaed-5ddf-bc34-c28ae6c89ede",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        420
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ]
+        },
+        "options": {}
+      },
+      "disabled": true
+    },
+    {
+      "id": "b756dcb0-3600-525d-bacb-285c0f1a07e2",
+      "name": "Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Accepts either the webhook payload or a Gmail Trigger item and emits one canonical\n// email object. The message_id is the idempotency key for the whole pipeline.\nconst src = $input.first().json;\nconst isWebhook = src.body !== undefined && src.headers !== undefined;\nconst p = isWebhook ? src.body : src;\n\nconst email = {\n  message_id: String(p.message_id ?? p.id ?? '').trim(),\n  sender: String(p.sender ?? p.from?.text ?? p.from ?? '').trim(),\n  subject: String(p.subject ?? '').trim(),\n  body: String(p.body ?? p.text ?? p.textPlain ?? p.snippet ?? ''),\n  received_at: p.received_at ?? p.date ?? new Date().toISOString(),\n};\n\nif (!email.message_id) throw new Error('Rejected: payload has no message_id');\nif (!email.sender) throw new Error('Rejected: payload has no sender');\nreturn [{ json: email }];"
+      }
+    },
+    {
+      "id": "e1e5b788-f429-5a32-9f7e-63865921a5e5",
+      "name": "Classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CLASSIFIER_URL }}/v1/classify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.CLASSIFIER_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 5000
+    },
+    {
+      "id": "2342aa20-6cb6-53c8-9764-61bcac17bdcc",
+      "name": "Skip if already routed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// The classifier remembers every message. Stop if it was already delivered (\"routed\") or\n// another run is delivering it right now (\"delivering\"), so nothing is posted twice.\n// \"classified\" on a duplicate means an earlier run failed before delivery: carry on.\nconst r = $input.first().json;\nif (r.duplicate && (r.status === 'routed' || r.status === 'delivering')) return [];\nreturn [{ json: r }];"
+      }
+    },
+    {
+      "id": "3a8b9d4c-b292-5153-b160-70f43a18999e",
+      "name": "Flatten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// One flat row per message, used by every Google Sheets destination.\nconst r = $input.first().json;\nconst email = $('Normalize').first().json;\nconst c = r.classification;\nreturn [{ json: {\n  received_at: email.received_at,\n  message_id: r.message_id,\n  sender: email.sender,\n  subject: email.subject,\n  category: c.category,\n  priority: c.priority,\n  confidence: c.confidence,\n  summary: c.summary,\n  rationale: c.rationale,\n  route: r.route,\n  review_reasons: (r.review_reasons || []).join(', '),\n  model: `${r.provider}/${r.model}`,\n  prompt_version: r.prompt_version,\n}}];"
+      }
+    },
+    {
+      "id": "12f18104-36a2-5810-a811-e616e5314449",
+      "name": "Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        300
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b80c8fef-a677-5340-85fb-2c162d75df03",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "support_ticket",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "support_ticket"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "334b6b31-12a2-5bfc-bf4f-870c0954b343",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "billing",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "billing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c093c7f6-6edf-595e-9539-70de788efbaa",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "crm",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "crm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ff6c5a08-b2fa-56b6-ac00-6830f4074b6a",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "feedback_log",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "feedback_log"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "afca48e9-59ea-5a28-b8a4-88e0cc6eda1c",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "human_review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "human_review"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c6577abe-8c0f-5a02-ac84-aa94c2247b1e",
+                    "leftValue": "={{ $json.route }}",
+                    "rightValue": "archive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "archive"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      }
+    },
+    {
+      "id": "fc340cae-d629-53ca-bfc2-f46c1a22d325",
+      "name": "Sheet: Tickets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1460,
+        0
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Tickets"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "triageGoogleShee",
+          "name": "Google Sheets (triage)"
+        }
+      }
+    },
+    {
+      "id": "6d5f64e6-d53b-5df6-8005-7d9a26547399",
+      "name": "Sheet: Billing",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1460,
+        160
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Billing"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "triageGoogleShee",
+          "name": "Google Sheets (triage)"
+        }
+      }
+    },
+    {
+      "id": "7fb92d73-86ec-5509-ba7b-7be21db93784",
+      "name": "Sheet: Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1460,
+        320
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "triageGoogleShee",
+          "name": "Google Sheets (triage)"
+        }
+      }
+    },
+    {
+      "id": "071beeb1-b1ed-5e7c-87e3-30a0877942b4",
+      "name": "Sheet: Feedback",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1460,
+        480
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Feedback"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "triageGoogleShee",
+          "name": "Google Sheets (triage)"
+        }
+      }
+    },
+    {
+      "id": "70ede393-d226-5e56-9f16-31b79e2b724b",
+      "name": "Sheet: Review",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1460,
+        640
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Review"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "triageGoogleShee",
+          "name": "Google Sheets (triage)"
+        }
+      }
+    },
+    {
+      "id": "38a01d76-c518-5afc-9b94-14cb038b4370",
+      "name": "Slack: review needed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1700,
+        640
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: `:mag: *Needs review* (${$('Classify').first().json.review_reasons.join(', ')})\\n*${$('Normalize').first().json.subject}* from ${$('Normalize').first().json.sender}\\nBest guess: ${$('Classify').first().json.classification.category} (${$('Classify').first().json.classification.confidence})` }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "289dd7fb-89ab-53ff-803d-2fd731906127",
+      "name": "Ack routed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1940,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CLASSIFIER_URL }}/v1/messages/{{ encodeURIComponent($('Classify').first().json.message_id) }}/ack",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.CLASSIFIER_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "2c6e5af1-5b9d-5891-90d2-786607a2882e",
+      "name": "Notify if urgent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Ping Slack only for urgent/high items. Review items get their own Slack message.\nconst r = $('Classify').first().json;\nif (!r.notify || r.route === 'human_review') return [];\nreturn [{ json: r }];"
+      }
+    },
+    {
+      "id": "51e4ac9a-92ed-5ca5-95ab-f9260e15f813",
+      "name": "Slack: urgent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2420,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: `:rotating_light: *${$json.classification.priority.toUpperCase()}* ${$json.classification.category}: ${$('Normalize').first().json.subject}\\n${$json.classification.summary}\\nRoute: ${$json.route}` }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize": {
+      "main": [
+        [
+          {
+            "node": "Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify": {
+      "main": [
+        [
+          {
+            "node": "Skip if already routed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip if already routed": {
+      "main": [
+        [
+          {
+            "node": "Flatten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flatten": {
+      "main": [
+        [
+          {
+            "node": "Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route": {
+      "main": [
+        [
+          {
+            "node": "Sheet: Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheet: Billing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheet: Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheet: Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheet: Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack routed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet: Review": {
+      "main": [
+        [
+          {
+            "node": "Slack: review needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack: review needed": {
+      "main": [
+        [
+          {
+            "node": "Ack routed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack routed": {
+      "main": [
+        [
+          {
+            "node": "Notify if urgent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify if urgent": {
+      "main": [
+        [
+          {
+            "node": "Slack: urgent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet: Tickets": {
+      "main": [
+        [
+          {
+            "node": "Ack routed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet: Billing": {
+      "main": [
+        [
+          {
+            "node": "Ack routed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet: Leads": {
+      "main": [
+        [
+          {
+            "node": "Ack routed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet: Feedback": {
+      "main": [
+        [
+          {
+            "node": "Ack routed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "emailTriageErr01",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

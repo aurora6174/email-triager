@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Email Triager: Design and Process</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 20mm 17mm;
+    @bottom-left { content: "Email Triager · Design and process"; font: 8.5pt "Noto Sans", sans-serif; color: #94A3B8; }
+    @bottom-right { content: counter(page) " / " counter(pages); font: 8.5pt "Noto Sans", sans-serif; color: #94A3B8; } }
+  @page :first { @bottom-left { content: none; } @bottom-right { content: none; } }
+  :root { --ink:#0F172A; --muted:#475569; --soft:#64748B; --line:#E2E8F0; --bg:#F8FAFC;
+          --n8n:#EA4B71; --svc:#2563EB; --llm:#7C3AED; --out:#059669; --err:#DC2626; --warn:#D97706; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: "Noto Sans", "DejaVu Sans", sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.5; margin: 0; background: white; }
+  h1, h2, h3, h4 { line-height: 1.25; margin: 0; }
+  h2 { font-size: 17pt; margin: 0 0 10pt; padding-top: 2pt; color: var(--ink); break-after: avoid; }
+  h2 .num { color: var(--svc); margin-right: 6pt; }
+  h3 { font-size: 12pt; margin: 16pt 0 5pt; break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 10pt 0 3pt; break-after: avoid; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+  li { margin-bottom: 2.5pt; }
+  code { font-family: "JetBrainsMono NF", "DejaVu Sans Mono", monospace; font-size: 8.6pt; background: #F1F5F9; padding: 0.5pt 3pt; border-radius: 3pt; }
+  pre { font-family: "JetBrainsMono NF", "DejaVu Sans Mono", monospace; font-size: 8.4pt; background: #F8FAFC; border: 1px solid var(--line); border-radius: 6pt; padding: 8pt 10pt; margin: 0 0 9pt; break-inside: avoid; }
+  section.chapter { break-before: page; }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 8.9pt; break-inside: auto; }
+  th { text-align: left; background: #F1F5F9; color: var(--muted); font-weight: 600; padding: 5pt 6pt; border-bottom: 1.5px solid #CBD5E1; }
+  td { padding: 4.5pt 6pt; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr { break-inside: avoid; }
+  figure { margin: 8pt 0 12pt; break-inside: avoid; text-align: center; }
+  figure img { max-width: 100%; max-height: 225mm; }
+  figure.wide img { width: 100%; }
+  figcaption { font-size: 8.6pt; color: var(--soft); margin-top: 5pt; text-align: left; }
+  figcaption b { color: var(--ink); }
+  .what-why { display: grid; grid-template-columns: 1fr 1fr; gap: 8pt; margin: 4pt 0 8pt; break-inside: avoid; }
+  .what-why > div { border-radius: 6pt; padding: 7pt 9pt; font-size: 9.3pt; }
+  .what-why .what { background: #F1F5F9; }
+  .what-why .why { background: #EFF6FF; }
+  .label { font-size: 7.5pt; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; color: var(--soft); display: block; margin-bottom: 2pt; }
+  .why .label { color: var(--svc); }
+  .callout { border-left: 3px solid var(--svc); background: #EFF6FF; padding: 7pt 10pt; border-radius: 0 6pt 6pt 0; margin: 6pt 0 10pt; font-size: 9.3pt; break-inside: avoid; }
+  .callout.warn { border-color: var(--warn); background: #FFFBEB; }
+  .callout.good { border-color: var(--out); background: #ECFDF5; }
+  .step { display: flex; gap: 9pt; align-items: baseline; margin: 16pt 0 5pt; break-after: avoid; }
+  .step .n { flex: none; width: 19pt; height: 19pt; border-radius: 50%; background: var(--n8n); color: white; font-weight: 700; font-size: 9.5pt; display: inline-flex; align-items: center; justify-content: center; transform: translateY(3pt); }
+  .step.svc .n { background: var(--svc); } .step.out .n { background: var(--out); } .step.err .n { background: var(--err); }
+  .step h3 { margin: 0; }
+  .decision { border: 1px solid var(--line); border-radius: 7pt; padding: 8pt 11pt; margin: 0 0 9pt; break-inside: avoid; }
+  .decision h4 { margin: 0 0 4pt; font-size: 10.5pt; }
+  .decision .choice { color: var(--svc); font-weight: 600; font-size: 9.3pt; margin-bottom: 4pt; }
+  .decision ul { margin-bottom: 2pt; }
+  .pill { display: inline-block; font-size: 7.8pt; font-weight: 600; padding: 0.5pt 6pt; border-radius: 10pt; border: 1px solid; }
+  .pill.n8n { color: #BE123C; border-color: var(--n8n); background: #FFF1F3; }
+  .pill.svc { color: #1D4ED8; border-color: var(--svc); background: #EFF6FF; }
+  .pill.llm { color: #5B21B6; border-color: var(--llm); background: #F5F3FF; }
+  .pill.out { color: #047857; border-color: var(--out); background: #ECFDF5; }
+  .pill.err { color: #B91C1C; border-color: var(--err); background: #FEF2F2; }
+  /* cover */
+  .cover { height: 255mm; display: flex; flex-direction: column; }
+  .cover .kicker { font-size: 9pt; letter-spacing: 0.16em; text-transform: uppercase; color: var(--n8n); font-weight: 700; margin-top: 30mm; }
+  .cover h1 { font-size: 34pt; margin: 6pt 0 8pt; letter-spacing: -0.01em; }
+  .cover .sub { font-size: 13pt; color: var(--muted); max-width: 150mm; }
+  .cover .stack { margin: 16pt 0 0; display: flex; gap: 6pt; flex-wrap: wrap; }
+  .glance { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9pt; margin-top: 22mm; }
+  .glance div { border: 1px solid var(--line); border-radius: 8pt; padding: 10pt 11pt; }
+  .glance b { display: block; font-size: 10pt; margin-bottom: 3pt; }
+  .glance span { font-size: 8.8pt; color: var(--muted); }
+  .cover .meta { margin-top: auto; font-size: 8.8pt; color: var(--soft); border-top: 1px solid var(--line); padding-top: 8pt; display: flex; justify-content: space-between; }
+  .toc { list-style: none; padding: 0; margin: 6pt 0 0; font-size: 10.5pt; }
+  .toc li { display: flex; gap: 8pt; padding: 6pt 0; border-bottom: 1px dotted #CBD5E1; }
+  .toc .n { color: var(--svc); font-weight: 700; width: 18pt; }
+  .toc small { color: var(--soft); margin-left: auto; }
+  .legend { display: flex; gap: 10pt; flex-wrap: wrap; font-size: 8.5pt; color: var(--muted); margin: 6pt 0 10pt; }
+  .legend i { display: inline-block; width: 10pt; height: 10pt; border-radius: 3pt; border: 1.4px solid; vertical-align: -1.5pt; margin-right: 4pt; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================= COVER -->
+<section class="cover">
+  <div class="kicker">Design and process breakdown</div>
+  <h1>Email Triager</h1>
+  <div class="sub">An n8n workflow that classifies incoming support email with an LLM and routes it to the right team. Ambiguous emails go to a human, and duplicates and failures are handled so that no email is lost or processed twice.</div>
+  <div class="stack">
+    <span class="pill n8n">n8n 2.48</span><span class="pill svc">Python 3.13 · FastAPI</span><span class="pill svc">SQLite</span>
+    <span class="pill llm">Claude / OpenAI structured outputs</span><span class="pill out">Google Sheets · Slack</span><span class="pill err">Docker Compose</span>
+  </div>
+  <div class="glance">
+    <div><b>Labels in seconds</b><span>7 categories, 4 priorities, a confidence score, a one-line summary and a rationale, enforced by a JSON schema.</span></div>
+    <div><b>Humans for the hard ones</b><span>Low confidence, "other", suspected prompt injection or bad model output go to a review queue, not a guess.</span></div>
+    <div><b>Delivered exactly once</b><span>Idempotency keyed on <code>message_id</code>, a delivery lease, retries at three levels, and a dead-letter queue.</span></div>
+    <div><b>Vendor-neutral</b><span>Claude, OpenAI, or an offline keyword baseline, chosen with one environment variable.</span></div>
+    <div><b>Tested and measured</b><span>28 offline tests, a 30-email labeled eval set, and an end-to-end Docker run.</span></div>
+    <div><b>Private by default</b><span>Self-hosted, secrets only in <code>.env</code>, and email bodies never written to logs.</span></div>
+  </div>
+  <div class="meta"><span>github.com/aurora6174/email-triager</span><span>November 2026</span></div>
+</section>
+
+<!-- ============================================================= CONTENTS -->
+<section class="chapter">
+  <h2>Contents</h2>
+  <ul class="toc">
+    <li><span class="n">1</span>The problem<small>what it solves and how success is measured</small></li>
+    <li><span class="n">2</span>Architecture<small>who owns what</small></li>
+    <li><span class="n">3</span>The process, step by step<small>nine steps, each with what and why</small></li>
+    <li><span class="n">4</span>Inside the classifier service<small>state machine, routing, HTTP contract</small></li>
+    <li><span class="n">5</span>Reliability and failure handling<small>retry layers, failure-mode table</small></li>
+    <li><span class="n">6</span>Design decisions and trade-offs<small>D1 to D12</small></li>
+    <li><span class="n">7</span>Testing and evaluation</li>
+    <li><span class="n">8</span>Security, cost and latency</li>
+    <li><span class="n">9</span>Known limitations and next steps</li>
+  </ul>
+
+  <h3 style="margin-top:22pt">How to read the diagrams</h3>
+  <p>The same colours are used in every figure:</p>
+  <div class="legend">
+    <span><i style="border-color:var(--n8n);background:#FFF1F3"></i>n8n (orchestration)</span>
+    <span><i style="border-color:var(--svc);background:#EFF6FF"></i>Classifier service (judgment and state)</span>
+    <span><i style="border-color:var(--llm);background:#F5F3FF"></i>LLM provider</span>
+    <span><i style="border-color:var(--out);background:#ECFDF5"></i>Destinations</span>
+    <span><i style="border-color:var(--warn);background:#FEF3C7"></i>Human review / temporary state</span>
+    <span><i style="border-color:var(--err);background:#FEE2E2"></i>Failure path</span>
+  </div>
+  <p>Solid arrows are the normal path. Dashed arrows are replies, retries, or paths taken only when something goes wrong.</p>
+
+  <div class="callout good"><b>The key idea in one sentence.</b> The LLM only <i>labels</i> an email. Deterministic, tested code decides where it goes, a state machine makes sure it gets there exactly once, and anything uncertain or broken ends up in front of a person.</div>
+</section>
+
+<!-- ============================================================= 1 PROBLEM -->
+<section class="chapter">
+  <h2><span class="num">1</span>The problem</h2>
+  <p>A small B2B software company runs one shared inbox (<code>support@</code>). Everything lands there: bug reports, refund requests, locked-out users, sales enquiries, feature ideas, phishing and SEO spam. Someone has to read every email to decide where it goes. That costs time, urgent problems wait behind newsletters, and sales leads go cold.</p>
+  <p><b>Goal:</b> every incoming email is labeled within seconds and delivered to the right place. Urgent issues get flagged right away, and anything the system is unsure about goes to a person instead of being guessed.</p>
+
+  <h3>Success criteria</h3>
+  <table>
+    <tr><th style="width:40%">Criterion</th><th>How it's met</th></tr>
+    <tr><td>Clear-cut emails are routed correctly</td><td>LLM classification with a fixed label set, measured with an eval set</td></tr>
+    <tr><td>Unclear emails are never auto-routed wrongly</td><td>Confidence threshold plus explicit review rules, all routed to <code>human_review</code></td></tr>
+    <tr><td>No email lost, none processed twice</td><td>Idempotency keyed on <code>message_id</code>, a delivery lease, retries, a dead-letter path</td></tr>
+    <tr><td>Swap LLM vendor without touching the workflow</td><td>Provider abstraction behind one HTTP endpoint</td></tr>
+    <tr><td>Auditable</td><td>Every result stores the model, prompt version, rationale and review reasons</td></tr>
+  </table>
+
+  <h3>Non-goals</h3>
+  <p>These are left out on purpose, to keep the project small and finished: writing reply drafts, multi-language tuning, parsing attachments, and a custom UI. Section 9 lists them as next steps.</p>
+
+  <h3>Labels the model can choose</h3>
+  <table>
+    <tr><th style="width:22%">Category</th><th>Meaning</th><th style="width:20%">Goes to</th></tr>
+    <tr><td><code>billing</code></td><td>Invoices, charges, refunds, payment methods, plan changes, VAT</td><td>Billing sheet</td></tr>
+    <tr><td><code>technical_support</code></td><td>Something in the product is broken, slow, erroring or confusing</td><td>Tickets sheet</td></tr>
+    <tr><td><code>account_access</code></td><td>Login, password reset, 2FA, SSO, adding or removing users</td><td>Tickets sheet</td></tr>
+    <tr><td><code>sales_lead</code></td><td>Pricing, demos, upgrades, partnerships</td><td>Leads sheet (CRM)</td></tr>
+    <tr><td><code>feedback</code></td><td>Feature requests, praise, complaints with nothing to fix right now</td><td>Feedback sheet</td></tr>
+    <tr><td><code>spam</code></td><td>Marketing, SEO offers, phishing, anything not meant for support</td><td>Archive</td></tr>
+    <tr><td><code>other</code></td><td>Legitimate email that fits nothing above (job applications, press)</td><td>Human review</td></tr>
+  </table>
+  <p>Priority is <code>urgent</code> (production down, data loss, security, or the sender can't work at all), <code>high</code>, <code>normal</code> or <code>low</code>. The prompt tells the model to judge urgency from the facts described, not from capital letters or the word "URGENT".</p>
+</section>
+
+<!-- ============================================================= 2 ARCHITECTURE -->
+<section class="chapter">
+  <h2><span class="num">2</span>Architecture</h2>
+  <p>The system has two parts, with a clear split of responsibilities.</p>
+  <figure class="wide">
+    <img src="diagrams/architecture.svg" alt="Architecture">
+    <figcaption><b>Figure 1. System overview.</b> n8n receives email and connects to the outside tools. The classifier service makes the decision and remembers each message. The LLM is used through a strict JSON schema. Red dashed lines are the failure path into the error workflow.</figcaption>
+  </figure>
+  <div class="two">
+    <div class="callout" style="border-color:var(--n8n);background:#FFF1F3"><b>n8n: orchestration.</b> Triggers, connections to SaaS tools, retries on HTTP steps, branching, notifications and the error workflow. This is the part a client's operations team can see and change.</div>
+    <div class="callout"><b>Classifier service: judgment and state.</b> The prompt, the LLM call, validating the answer, the review rules, the routing table and idempotency. This is the part that needs code review, tests and evals.</div>
+  </div>
+  <p>Why split it this way? Workflow tools are good at connecting things, and code is better for logic that has to be correct and tested. Putting the decision logic in a service means it has unit tests, an eval harness and version control, and the same service would work behind Make or Zapier unchanged (decisions D1 and D2).</p>
+</section>
+
+<!-- ============================================================= 3 PROCESS -->
+<section class="chapter">
+  <h2><span class="num">3</span>The process, step by step</h2>
+  <p>Figure 2 shows the path of one email. Figure 3 shows the same run as messages between the components over time. Each step is then explained with <b>what</b> happens and <b>why</b> it's built that way.</p>
+  <figure>
+    <img src="diagrams/flow.svg" alt="Process flow" style="max-height:200mm">
+    <figcaption><b>Figure 2. End-to-end flow.</b> Numbers match the step headings below. Spam skips delivery but is still acked, so it is never processed again.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <figure class="wide">
+    <img src="diagrams/sequence.svg" alt="Sequence diagram">
+    <figcaption><b>Figure 3. One successful run over time.</b> The sender gets <code>202</code> straight away, before any LLM work. The classifier writes to its store twice (claim, then result), and n8n acks only after the destination accepted the row.</figcaption>
+  </figure>
+
+  <div class="step"><span class="n">1</span><h3>Trigger</h3></div>
+  <div class="what-why">
+    <div class="what"><span class="label">What</span>An email arrives through one of two entry points: a <b>webhook</b> (<code>POST /webhook/email-triage</code>, authenticated with an <code>X-Webhook-Secret</code> header) or the <b>Gmail Trigger</b> (disabled by default), which checks an inbox every minute.</div>
+    <div class="why"><span class="label">Why</span>The webhook keeps the pipeline testable and independent of any one email provider, and it's how helpdesks and mail services (Zendesk, Front, Postmark inbound) push events. Gmail is the common small-business case.</div>
+  </div>
+  <ul>
+    <li>The webhook answers <b>202 Accepted immediately</b>, before classification. An LLM call takes seconds, and mail forwarders time out or retry when a webhook is slow. Answering early keeps their retry behaviour separate from ours.</li>
+    <li>The webhook secret is stored as an n8n credential that is generated from <code>.env</code> at startup, so it never appears in git.</li>
+  </ul>
+
+  <div class="step"><span class="n">2</span><h3>Normalize</h3></div>
+  <div class="what-why">
+    <div class="what"><span class="label">What</span>A Code node maps either input shape into one object: <code>{message_id, sender, subject, body, received_at}</code>. If <code>message_id</code> or <code>sender</code> is missing, it throws an error.</div>
+    <div class="why"><span class="label">Why</span>Everything after this step depends on one contract, so adding another trigger (for example Outlook) only changes this node. With no stable ID there is no idempotency, so a payload without one goes to the dead-letter queue rather than risk processing it twice.</div>
+  </div>
+</section>
+
+<section>
+  <div class="step svc"><span class="n">3</span><h3>Classify (n8n calls the classifier service)</h3></div>
+  <p>An HTTP Request node calls <code>POST /v1/classify</code> with a shared <code>X-API-Key</code>. It retries up to 4 times, 5 s apart, with a 90 s timeout. Figure 4 shows what happens inside the service.</p>
+  <figure>
+    <img src="diagrams/classifier_pipeline.svg" alt="Classifier pipeline" style="max-height:150mm">
+    <figcaption><b>Figure 4. Inside <code>/v1/classify</code>.</b> The request can end in five ways: a stored result (duplicate), 409, 422, 503, or a new classification. Only the last two touch the LLM.</figcaption>
+  </figure>
+  <ol>
+    <li><b>Idempotency claim.</b> Look up the <code>message_id</code>. If it's new, claim it (<code>processing</code>). If it has been seen, return the stored result with <code>duplicate: true</code> and <b>don't call the LLM again</b>. If another request is classifying it right now, answer <code>409</code> with <code>Retry-After: 5</code>. If the ID was used before with different content, answer <code>422</code>: that's a bug or tampering, so never overwrite.</li>
+    <li><b>Input guards.</b> Cut the body to 12,000 characters. The response says <code>body_truncated: true</code>, so nothing is cut silently. Empty emails skip the LLM and go straight to review.</li>
+    <li><b>Prompt assembly.</b> A fixed system prompt (label definitions, tie-break rules, priority rubric, confidence guidance, injection handling) plus the email inside <code>&lt;email&gt;</code> tags. Any <code>&lt;/email&gt;</code> inside the email is escaped.</li>
+    <li><b>LLM call with structured output.</b> The provider must return JSON matching a strict schema. For Claude this is <code>output_config.format</code> at <code>effort: low</code>, with the server-side refusal fallback. For OpenAI it's the Responses API with a strict <code>json_schema</code>.</li>
+    <li><b>Validation.</b> Pydantic checks the JSON again, including things the provider schema can't express (confidence between 0 and 1, length limits). A bad answer or a refusal is retried once. If it fails again, the email gets a fallback label and goes to review.</li>
+    <li><b>Review rules</b>, written as plain code (Figure 5).</li>
+    <li><b>Routing table:</b> category → route. <code>notify</code> is set for urgent and high priority.</li>
+    <li><b>Persist and log.</b> Store the result (<code>classified</code>), start the delivery lease, and write one JSON log line that never includes the email body.</li>
+  </ol>
+</section>
+
+<section>
+  <h3 style="margin-top:0">Review rules: when a human decides</h3>
+  <figure>
+    <img src="diagrams/review_decision.svg" alt="Review decision tree" style="max-height:125mm">
+    <figcaption><b>Figure 5. Review rules and routing.</b> Each check is cheap, deterministic code. The model's label is kept even when an email goes to review, so the reviewer sees its best guess and rationale and can decide in seconds.</figcaption>
+  </figure>
+  <table>
+    <tr><th>Reason code</th><th>Trigger</th></tr>
+    <tr><td><code>low_confidence</code></td><td>Self-reported confidence below <code>CONFIDENCE_THRESHOLD</code> (0.75 by default, tuned with the eval)</td></tr>
+    <tr><td><code>category_other</code></td><td>The model said "doesn't fit": exactly what a human should see</td></tr>
+    <tr><td><code>possible_prompt_injection</code></td><td>The email contains phrasing such as "ignore previous instructions" or "classify this as"</td></tr>
+    <tr><td><code>llm_output_invalid</code></td><td>Refusal, truncated output, or off-schema output twice in a row</td></tr>
+    <tr><td><code>empty_message</code></td><td>No subject and no body, so there is nothing to classify (no LLM call)</td></tr>
+  </table>
+</section>
+
+<section>
+  <div class="step"><span class="n">4</span><h3>Skip if already delivered, or being delivered</h3></div>
+  <p>For a duplicate, the <code>status</code> the service returns decides what n8n does next:</p>
+  <table>
+    <tr><th style="width:15%">Status</th><th>Meaning</th><th style="width:22%">n8n</th></tr>
+    <tr><td><code>routed</code></td><td>An earlier run delivered it</td><td>Stop</td></tr>
+    <tr><td><code>delivering</code></td><td>Another run got the result less than 120 s ago and is delivering it now</td><td>Stop</td></tr>
+    <tr><td><code>classified</code></td><td>An earlier run classified it but never acked, and its lease has run out, so that run failed</td><td><b>Continue and deliver</b></td></tr>
+  </table>
+  <figure class="wide">
+    <img src="diagrams/idempotency.svg" alt="Idempotency scenarios">
+    <figcaption><b>Figure 6. Three ways an email can arrive more than once.</b> In every case the LLM is called once and the email is delivered once. In scenario B, the failure is visible in the dead-letter queue until the retry fixes it.</figcaption>
+  </figure>
+  <div class="callout warn"><b>Why three statuses and not one "seen" flag.</b> Dedupe by ID alone has two classic bugs. <i>Dropping work:</i> if every duplicate is skipped, an email whose first run failed after classification is never delivered (scenario B). <i>Doing work twice:</i> if every unacked duplicate continues, two copies arriving seconds apart both deliver, because the first hasn't acked yet (scenario C). The 120 s delivery lease is longer than the worst-case delivery time in n8n (Sheets and ack retries, about 45 s), so a healthy run always acks inside it.</div>
+</section>
+
+<section>
+  <div class="step"><span class="n">5</span><h3>Flatten and route</h3></div>
+  <div class="what-why">
+    <div class="what"><span class="label">What</span>The nested response becomes one flat row (time, sender, subject, category, priority, confidence, summary, rationale, route, review reasons, model, prompt version). A Switch node branches on <code>route</code>.</div>
+    <div class="why"><span class="label">Why</span>The service has already chosen the route, so the Switch is a plain lookup with no logic to duplicate or drift. Every sheet tab shares one header layout.</div>
+  </div>
+
+  <div class="step out"><span class="n">6</span><h3>Deliver</h3></div>
+  <table>
+    <tr><th>Route</th><th>Destination</th><th>Notes</th></tr>
+    <tr><td><code>support_ticket</code></td><td>Sheet <code>Tickets</code></td><td>technical_support and account_access</td></tr>
+    <tr><td><code>billing</code></td><td>Sheet <code>Billing</code></td><td></td></tr>
+    <tr><td><code>crm</code></td><td>Sheet <code>Leads</code></td><td>stands in for HubSpot or Pipedrive (D8)</td></tr>
+    <tr><td><code>feedback_log</code></td><td>Sheet <code>Feedback</code></td><td></td></tr>
+    <tr><td><code>human_review</code></td><td>Sheet <code>Review</code> + Slack</td><td>shows the model's best guess and the review reason</td></tr>
+    <tr><td><code>archive</code></td><td>nothing recorded</td><td>spam; still acked, so it is never retried</td></tr>
+  </table>
+  <p>Sheets nodes retry 3 times. If a destination still fails, the run errors <b>before</b> the ack, so the message stays <code>classified</code>, and a retry after the lease runs out finishes the delivery.</p>
+
+  <div class="step"><span class="n">7</span><h3>Ack</h3></div>
+  <div class="what-why">
+    <div class="what"><span class="label">What</span><code>POST /v1/messages/{id}/ack</code> marks the message <code>routed</code> and ends the lease. Acking twice is harmless.</div>
+    <div class="why"><span class="label">Why</span>The classifier can't know whether n8n delivered the email; only n8n knows. The ack records "delivered", which is how step 4 tells "finish this" from "already done".</div>
+  </div>
+
+  <div class="step out"><span class="n">8</span><h3>Notify</h3></div>
+  <div class="what-why">
+    <div class="what"><span class="label">What</span>For urgent and high items (not review or archive), a Slack incoming webhook posts the priority, category, subject and summary.</div>
+    <div class="why"><span class="label">Why after the ack</span>The record in the sheet matters more than the ping. If Slack is down, the run continues: the email is still delivered and marked routed. A missed ping is a smaller problem than a lost email.</div>
+  </div>
+
+  <div class="step err"><span class="n">9</span><h3>Error path (dead letter)</h3></div>
+  <p>The main workflow names an <b>error workflow</b>. Any unhandled failure starts it: a bad payload, the classifier unreachable after retries, a provider outage, or a destination still failing after retries. It builds a dead-letter row (time, execution link, failed node, error), appends it to the <code>DeadLetter</code> sheet, and posts a Slack alert. If the sheet fails too, the Slack alert is still sent.</p>
+  <div class="callout good"><b>Recovery.</b> n8n keeps the failed execution with its full input. An operator fixes the cause (for example a refreshed Google token or topped-up provider credit) and presses <b>Retry</b> in n8n. That's safe because the classifier is idempotent: an email that was already classified isn't billed again, and one that was already routed isn't delivered twice.</div>
+</section>
+
+<!-- ============================================================= 4 INTERNALS -->
+<section class="chapter">
+  <h2><span class="num">4</span>Inside the classifier service</h2>
+  <h3 style="margin-top:0">Message state machine</h3>
+  <figure class="wide">
+    <img src="diagrams/state_machine.svg" alt="State machine">
+    <figcaption><b>Figure 7. Each message's life in the store.</b> <code>processing</code> is a short claim, <code>classified</code> holds the answer, and <code>routed</code> means delivered. Loops on a state are duplicates arriving, or a claim taken over after the previous holder disappeared.</figcaption>
+  </figure>
+  <ul>
+    <li><b>Atomic claim.</b> The claim uses SQLite <code>BEGIN IMMEDIATE</code>, which takes the write lock up front, so "read the state, then insert" can't interleave between concurrent requests. This is the same idea as the Postgres advisory locks in the booking API.</li>
+    <li><b>Claim TTL (180 s).</b> If the process crashes during the LLM call, the <code>processing</code> row would otherwise block the message forever. After the TTL, the next request takes the claim over.</li>
+    <li><b>Delivery lease (120 s).</b> Handing out a result starts a lease. Duplicates inside the lease are told <code>delivering</code>; after it, the next duplicate takes over delivery.</li>
+    <li><b>Content hash.</b> A SHA-256 of sender, subject and body. A reused <code>message_id</code> with different content gets <code>422</code>, as with Stripe's idempotency keys.</li>
+  </ul>
+
+  <h3>Routing table: code, not prompt</h3>
+<pre>ROUTE_BY_CATEGORY = {
+    billing:           billing,          technical_support: support_ticket,
+    account_access:    support_ticket,   sales_lead:        crm,
+    feedback:          feedback_log,     spam:              archive,
+    other:             human_review,
+}</pre>
+  <p>A unit test checks that every category has a route, so adding a label without a destination fails CI.</p>
+
+  <h3>HTTP contract</h3>
+  <table>
+    <tr><th style="width:30%">Endpoint</th><th style="width:20%">Success</th><th>Errors</th></tr>
+    <tr><td><code>POST /v1/classify</code></td><td>200 + result</td><td>401 bad key · 409 in progress (<code>Retry-After: 5</code>) · 422 invalid or ID reused · 500 provider misconfigured · 503 provider down (<code>Retry-After: 30</code>)</td></tr>
+    <tr><td><code>POST /v1/messages/{id}/ack</code></td><td>200</td><td>404 unknown · 409 still processing</td></tr>
+    <tr><td><code>GET /v1/messages/{id}</code></td><td>200 + stored result</td><td>404</td></tr>
+    <tr><td><code>GET /healthz</code></td><td>200</td><td>none</td></tr>
+  </table>
+  <p>The status codes are chosen so that n8n's generic "retry on failure" does the right thing. 409 and 503 are temporary and clear up on retry. 422 and 500 won't, so once the retries are used up they land in the dead-letter path, where a person looks at them.</p>
+</section>
+
+<!-- ============================================================= 5 RELIABILITY -->
+<section>
+  <h2 style="margin-top:20pt"><span class="num">5</span>Reliability and failure handling</h2>
+  <figure>
+    <img src="diagrams/retry_layers.svg" alt="Retry layers" style="max-height:80mm">
+    <figcaption><b>Figure 8. Retries at three levels.</b> Each level handles the failures it can actually fix. Transient network errors are retried inside the SDK, unusable answers once in the service, and whole steps by n8n. What's left becomes a human-review item or a dead-letter entry, never a silent loss.</figcaption>
+  </figure>
+  <table>
+    <tr><th style="width:22%">Failure</th><th style="width:17%">Detected by</th><th style="width:30%">Handling</th><th>End state</th></tr>
+    <tr><td>Wrong or missing webhook secret</td><td>n8n header auth</td><td>403, no execution</td><td>Nothing processed</td></tr>
+    <tr><td>Payload missing id or sender</td><td>Normalize throws</td><td>Error workflow</td><td>Dead letter + Slack alert</td></tr>
+    <tr><td>Classifier down or restarting</td><td>HTTP error</td><td>4 tries × 5 s, then error workflow</td><td>Dead letter; retrying later is safe</td></tr>
+    <tr><td>LLM rate limit, 5xx or timeout</td><td>SDK retries ×2, then 503</td><td>n8n retries, then error workflow</td><td>Dead letter; nothing billed twice</td></tr>
+    <tr><td>Wrong API key or model name</td><td>500</td><td>Error workflow</td><td>Dead letter + alert (needs an operator)</td></tr>
+    <tr><td>Refusal, truncated or off-schema output</td><td>Stop reason + Pydantic</td><td>1 retry, then fallback label</td><td><code>human_review</code> (<code>llm_output_invalid</code>)</td></tr>
+    <tr><td>The model is unsure</td><td>Confidence &lt; threshold</td><td>Review rule</td><td><code>human_review</code> (<code>low_confidence</code>)</td></tr>
+    <tr><td>Prompt injection in the email</td><td>Pattern + prompt rule</td><td>Review rule; label kept but not trusted</td><td><code>human_review</code></td></tr>
+    <tr><td>Same email redelivered later</td><td>Idempotency store</td><td>Stored result; routed ones stop</td><td>Delivered exactly once</td></tr>
+    <tr><td>Second copy while the first is delivering</td><td>Delivery lease</td><td>Answered <code>delivering</code>; n8n stops</td><td>Delivered once; a failure in the first run is already dead-lettered</td></tr>
+    <tr><td>Two copies at the same instant</td><td><code>processing</code> claim</td><td>Second gets 409 and retries</td><td>Classified once</td></tr>
+    <tr><td>Process crashes during the LLM call</td><td>Claim TTL</td><td>Next delivery takes the claim over</td><td>Classified once</td></tr>
+    <tr><td>Google Sheets or its auth fails</td><td>Sheets node after 3 tries</td><td>Error workflow, before the ack</td><td>Dead letter; stays <code>classified</code>, and a retry after the lease delivers it</td></tr>
+    <tr><td>Slack down</td><td>HTTP error</td><td>Continue anyway</td><td>Delivered; ping missed (visible in the execution)</td></tr>
+    <tr><td>Very large email</td><td>Length check</td><td>Truncated to 12k chars and flagged</td><td>Classified on the first 12k chars</td></tr>
+  </table>
+</section>
+
+<!-- ============================================================= 6 DECISIONS -->
+<section class="chapter">
+  <h2><span class="num">6</span>Design decisions and trade-offs</h2>
+
+  <div class="decision"><h4>D1. n8n vs Make vs Zapier</h4><div class="choice">Choice: n8n, self-hosted</div>
+  <ul><li><b>For n8n:</b> it can be self-hosted, so customer email stays on the client's infrastructure. It has real JavaScript code nodes, a built-in error-workflow concept, and workflows that export as JSON and live in git (this repo imports them at startup). Cost doesn't grow per task.</li>
+  <li><b>For Make:</b> a better visual debugger and good built-in error handlers ("break", "resume", "rollback"). A fine choice for a non-technical client who wants SaaS only.</li>
+  <li><b>For Zapier:</b> the largest app catalogue and the fastest setup, but weaker branching and error handling, and per-task pricing gets expensive at inbox volume.</li>
+  <li><b>What would change the choice:</b> a client already paying for Make or Zapier with no need to self-host. The classifier is a plain HTTP API, so it works unchanged behind either.</li></ul></div>
+
+  <div class="decision"><h4>D2. A separate classifier service instead of n8n's AI nodes</h4><div class="choice">Choice: a small FastAPI service called over HTTP</div>
+  <ul><li><b>For:</b> the prompt, schema, review rules and routing are versioned code with 28 offline unit tests and an eval harness. The provider is swapped with one env var. Idempotency needs a transactional store, which n8n nodes can't provide atomically.</li>
+  <li><b>Against:</b> one more container to run and monitor, and an extra network hop.</li>
+  <li><b>When I'd skip it:</b> a low-stakes internal workflow, where n8n's AI nodes with a structured output parser are quicker.</li></ul></div>
+
+  <div class="decision"><h4>D3. Structured outputs instead of "please reply in JSON"</h4><div class="choice">Choice: a provider-enforced JSON schema, then Pydantic validation</div>
+  <ul><li>Asking for JSON in the prompt fails a few percent of the time: stray prose, markdown fences, invented labels. Constrained decoding means the output always parses and always uses a valid label.</li>
+  <li>Pydantic still checks again, for the bounds the provider schema can't express and for refusals and truncation, which fail in different ways.</li>
+  <li>Tool calling would also work, but structured output is the direct tool for "return this shape", with no tool loop to manage.</li></ul></div>
+
+  <div class="decision"><h4>D4. The LLM labels; code decides</h4>
+  <p style="margin:0">The model only outputs a category, priority and confidence. Routes, notifications and review decisions are deterministic code. So a prompt change can't silently send email somewhere new, a successful prompt injection can at worst change a label (the model has no tools), and routing rules are reviewed and unit-tested like any other code.</p></div>
+
+  <div class="decision"><h4>D5. How low-confidence emails are handled</h4>
+  <ul><li>Self-reported LLM confidence is only roughly calibrated: useful for ranking, not as a true probability. So the threshold is <b>set empirically</b>. The eval shows <i>auto-route precision</i> (of the emails that skipped review, the share that were right) against <i>review rate</i>, and the business picks the trade-off.</li>
+  <li><code>other</code> always goes to review, even at high confidence.</li>
+  <li>Considered but not built yet: classifying twice and flagging disagreement, or using token probabilities where the provider exposes them. Both cost more; the threshold plus eval is the cheap first step.</li></ul></div>
+
+  <div class="decision"><h4>D6. Idempotency key = <code>message_id</code>, with two states and a lease</h4>
+  <p style="margin:0">Email has a natural unique ID (the Gmail message ID, or the RFC 5322 <code>Message-ID</code> header) that every redelivery source keeps. It is paired with a content hash so a reused ID is caught, not trusted. The <code>classified</code> → <code>routed</code> states and the delivery lease avoid both classic dedupe bugs (Figure 6).</p></div>
+
+  <div class="decision"><h4>D7. Error workflow and dead-letter sheet instead of a message queue</h4>
+  <p style="margin:0">A queue (SQS, RabbitMQ, Vercel Queues) gives durable retries with backoff, and is the right step up at higher volume or with n8n in queue mode. For one inbox (hundreds of emails a day), n8n's execution retry, saved failed executions and a visible dead-letter list are enough, with no extra infrastructure. The idempotent classifier is what makes manual retries safe.</p></div>
+</section>
+
+<section>
+  <div class="decision"><h4>D8. Google Sheets as tickets and CRM; Slack through an incoming webhook</h4>
+  <p style="margin:0">Every client can open a sheet, and it makes the demo visible. In production, each tab maps to a real system (Tickets → Zendesk, Jira or Linear; Leads → HubSpot or Pipedrive), and swapping one is a single node change because the row contract stays the same. A Slack incoming webhook only needs a URL, with no OAuth app, which is enough for one-way alerts.</p></div>
+
+  <div class="decision"><h4>D9. SQLite instead of Postgres for the idempotency store</h4>
+  <p style="margin:0">One classifier replica easily handles an inbox. SQLite in WAL mode with <code>BEGIN IMMEDIATE</code> gives correct concurrent claims with nothing extra to run. With more than one replica, or on serverless hosting, the same state machine moves to Postgres (<code>INSERT … ON CONFLICT</code> plus a row lock). The store is one small class, so the change stays contained.</p></div>
+
+  <div class="decision"><h4>D10. Model and effort</h4>
+  <ul><li>The default is Claude Opus 5.5 at <code>effort: low</code>. Classification doesn't need deep reasoning, and low effort keeps latency and tokens down without dropping to a smaller model.</li>
+  <li>A cheaper model (Claude Haiku 5.5 or an OpenAI small model) is a one-line <code>.env</code> change, and should only be made after the eval shows quality holds.</li>
+  <li>The server-side refusal fallback is enabled where supported, so a rare safety decline on an unusual email is retried on another model instead of failing.</li>
+  <li>Prompt caching isn't used: the system prompt is shorter than the minimum cacheable size, so caching would have no effect.</li></ul></div>
+
+  <div class="decision"><h4>D11. Prompt-injection defense in depth</h4>
+  <p>Email is untrusted text written by strangers, so no single layer is relied on.</p>
+  <figure style="margin:4pt 0 0">
+    <img src="diagrams/defense.svg" alt="Defense layers">
+    <figcaption><b>Figure 9. Five layers between a hostile email and any action.</b> Even if all the prompt-level layers fail, the worst outcome is a wrong label, and routing code limits what a wrong label can cause.</figcaption>
+  </figure></div>
+
+  <div class="decision"><h4>D12. Privacy</h4>
+  <p style="margin:0">Logs contain IDs, labels and timings, never email bodies. With self-hosted n8n, email content only leaves the client's infrastructure for the LLM API call. n8n keeps execution data, including email content, for debugging; in production, set <code>EXECUTIONS_DATA_MAX_AGE</code> to match the client's retention policy.</p></div>
+</section>
+
+<!-- ============================================================= 7 TESTING -->
+<section class="chapter">
+  <h2><span class="num">7</span>Testing and evaluation</h2>
+  <table>
+    <tr><th style="width:16%">Layer</th><th>What it checks</th><th style="width:30%">How to run</th></tr>
+    <tr><td>Unit and API tests (28)</td><td>Routing, review rules, idempotency (duplicate, concurrent, conflict, crash, delivery lease), retries, error mapping, truncation, injection flag, provider response parsing</td><td><code>cd classifier &amp;&amp; uv run pytest</code><br>offline, about 1 s</td></tr>
+    <tr><td>Eval (quality)</td><td>30 labeled emails, including hard cases: mixed intent, injection, vague one-liners, fake urgency</td><td><code>uv run python -m evals.run_eval</code><br>real LLM, costs a few cents</td></tr>
+    <tr><td>End-to-end</td><td>The full Docker stack: webhook → n8n → classifier → route → ack, plus the duplicate, concurrent-copy and error paths</td><td><code>LLM_PROVIDER=fake docker compose up</code>, then <code>scripts/send_samples.py</code></td></tr>
+  </table>
+  <h3>What the eval reports</h3>
+  <ul>
+    <li><b>Category accuracy:</b> correct labels out of 30.</li>
+    <li><b>Review rate:</b> the share of emails a person has to look at.</li>
+    <li><b>Auto-route precision:</b> of the emails that skipped review, the share that were right. This is the number that protects customers.</li>
+    <li>The <b>most common confusions</b>, for example <code>sales_lead → billing</code>, which show where the prompt needs work.</li>
+  </ul>
+  <div class="callout"><b>Baseline.</b> The offline keyword-rules provider scores <b>67% accuracy</b> (20/30), with a 37% review rate and 84% auto-route precision. An LLM has to clearly beat this to justify its cost. The LLM scores will be added here after the first eval run with an API key.</div>
+</section>
+
+<!-- ============================================================= 8 SECURITY / COST -->
+<section class="chapter">
+  <h2><span class="num">8</span>Security, cost and latency</h2>
+  <h3 style="margin-top:0">Security</h3>
+  <ul>
+    <li>Webhook: header-secret auth, using an n8n credential generated from the environment.</li>
+    <li>n8n → classifier: a shared <code>X-API-Key</code>, compared in constant time.</li>
+    <li>Secrets live only in <code>.env</code> (gitignored); <code>.env.example</code> documents every variable.</li>
+    <li>The classifier container runs as a non-root user. Unknown payload fields are ignored, and every field has a size limit.</li>
+  </ul>
+  <h3>Cost and latency (rough)</h3>
+  <ul>
+    <li>Tokens per email: about 700 for the system prompt plus the email (usually 100 to 1,000) in, and about 120 out.</li>
+    <li>Latency is dominated by the LLM call (seconds). The sender never waits for it, because the webhook answers 202 first.</li>
+    <li>Duplicates cost nothing: they are answered from the store.</li>
+  </ul>
+
+  <h2 style="margin-top:22pt"><span class="num">9</span>Known limitations and next steps</h2>
+  <table>
+    <tr><th style="width:38%">Limitation</th><th>Next step</th></tr>
+    <tr><td>One classifier replica (SQLite)</td><td>Postgres store (D9)</td></tr>
+    <tr><td>Confidence is self-reported</td><td>Calibrate the threshold on real traffic; classify twice for borderline cases</td></tr>
+    <tr><td>English-only prompt and eval set</td><td>Add multilingual eval cases</td></tr>
+    <tr><td>Replies in an existing thread are classified as new emails</td><td>Route by thread ID when an earlier message in the thread is known</td></tr>
+    <tr><td>Attachments are ignored</td><td>Classify on attachment text where relevant</td></tr>
+    <tr><td>Review-queue corrections aren't fed back</td><td>Turn corrections into new eval cases (the cheapest way to improve the prompt)</td></tr>
+    <tr><td>The Gmail path is wired up but untested end to end</td><td>Test it with a demo mailbox</td></tr>
+  </table>
+</section>
+
+</body>
+</html>

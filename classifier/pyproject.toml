@@ -1,0 +1,32 @@
+[project]
+name = "triage-classifier"
+version = "0.1.0"
+description = "LLM email/ticket classifier service used by the n8n email-triage workflow"
+requires-python = ">=3.13"
+dependencies = [
+    "anthropic>=2.10.0",
+    "fastapi>=0.165.0",
+    "openai>=3.55.1",
+    "pydantic>=2.14.4",
+    "pydantic-settings>=2.16.3",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

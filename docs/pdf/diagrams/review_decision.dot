@@ -1,0 +1,23 @@
+digraph G {
+  fontname="Noto Sans"; node [fontname="Noto Sans", fontsize=11, shape=box, style="rounded,filled", penwidth=1.2]; edge [fontname="Noto Sans", fontsize=9.5, color="#475569", fontcolor="#334155", arrowsize=0.7, penwidth=1.1];
+  rankdir=TB; nodesep=0.25; ranksep=0.3; pad=0.2; bgcolor="transparent";
+  node [fillcolor="white", color="#2563EB"];
+  edge [fontsize=9];
+  in [label="Validated\nclassification", fillcolor="#DBEAFE"];
+  q1 [label="LLM output\nunusable?", shape=diamond, style=filled, height=0.8];
+  q2 [label="Injection\npattern?", shape=diamond, style=filled, height=0.8];
+  q3 [label="confidence\n< 0.75?", shape=diamond, style=filled, height=0.8];
+  q4 [label="category\n= other?", shape=diamond, style=filled, height=0.8];
+  hr [label="human_review\nSheet: Review + Slack", fillcolor="#FEF3C7", color="#D97706"];
+  tbl [label="Routing table", fillcolor="#DBEAFE"];
+  node [color="#059669", fillcolor="#ECFDF5", width=1.0];
+  t1 [label="technical_support\naccount_access\n→ support_ticket"];
+  t2 [label="billing\n→ billing"];
+  t3 [label="sales_lead\n→ crm"];
+  t4 [label="feedback\n→ feedback_log"];
+  t5 [label="spam\n→ archive", fillcolor="#F1F5F9", color="#64748B"];
+  in -> q1; q1 -> q2 [label="no"]; q2 -> q3 [label="no"]; q3 -> q4 [label="no"]; q4 -> tbl [label="no"];
+  q1 -> hr [label="yes"]; q2 -> hr [label="yes"]; q3 -> hr [label="yes"]; q4 -> hr [label="yes"];
+  {rank=same; q2; hr}
+  tbl -> t1; tbl -> t2; tbl -> t3; tbl -> t4; tbl -> t5;
+}

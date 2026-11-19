@@ -1,0 +1,56 @@
+# Local stack: classifier API + n8n with both workflows imported and published.
+#   cp .env.example .env   # fill in keys
+#   docker compose up --build
+services:
+  classifier:
+    build: ./classifier
+    env_file: .env
+    environment:
+      DB_PATH: /app/data/classifier.db
+    volumes:
+      - classifier_data:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  n8n-bootstrap:
+    image: n8nio/n8n:2.48.6
+    entrypoint: ["/bin/sh", "/scripts/bootstrap.sh"]
+    environment: &n8n-env
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY in .env}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?set WEBHOOK_SECRET in .env}
+      CLASSIFIER_URL: http://classifier:8000
+      CLASSIFIER_API_KEY: ${CLASSIFIER_API_KEY:-}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      GOOGLE_SHEET_ID: ${GOOGLE_SHEET_ID:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # Workflows read the settings above through $env.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      GENERIC_TIMEZONE: ${TIMEZONE:-UTC}
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+      - ./n8n/scripts:/scripts:ro
+
+  n8n:
+    image: n8nio/n8n:2.48.6
+    environment:
+      <<: *n8n-env
+      WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://localhost:5678/}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    ports:
+      - "5678:5678"
+    depends_on:
+      n8n-bootstrap:
+        condition: service_completed_successfully
+      classifier:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  classifier_data:
+  n8n_data:

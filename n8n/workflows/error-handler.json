@@ -1,0 +1,134 @@
+{
+  "id": "emailTriageErr01",
+  "name": "Email Triage - Error Handler",
+  "active": false,
+  "nodes": [
+    {
+      "id": "b515d77a-1629-5856-9697-c82f3c839a7d",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "1fdaa47a-21ac-5365-934a-42c53f6d327f",
+      "name": "Build dead-letter row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Turn n8n's error payload into a dead-letter row. The full input is kept in the failed\n// execution, so a human can fix the cause and press \"Retry\" on it in the n8n UI; the\n// classifier's idempotency makes that retry safe.\nconst e = $input.first().json;\nreturn [{ json: {\n  failed_at: new Date().toISOString(),\n  workflow: e.workflow?.name ?? '',\n  execution_id: e.execution?.id ?? '',\n  execution_url: e.execution?.url ?? '',\n  failed_node: e.execution?.lastNodeExecuted ?? '',\n  error: (e.execution?.error?.message ?? 'unknown error').slice(0, 500),\n}}];"
+      }
+    },
+    {
+      "id": "163990cd-9f59-57e1-acf2-23648195c146",
+      "name": "Sheet: DeadLetter",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "DeadLetter"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "triageGoogleShee",
+          "name": "Google Sheets (triage)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "0c49e57f-9f0c-56d4-8fdb-7d3ae6246ec9",
+      "name": "Slack: pipeline failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: `:x: *Email triage failed* at node ${$('Build dead-letter row').first().json.failed_node}\\n${$('Build dead-letter row').first().json.error}\\n${$('Build dead-letter row').first().json.execution_url}` }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build dead-letter row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build dead-letter row": {
+      "main": [
+        [
+          {
+            "node": "Sheet: DeadLetter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet: DeadLetter": {
+      "main": [
+        [
+          {
+            "node": "Slack: pipeline failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

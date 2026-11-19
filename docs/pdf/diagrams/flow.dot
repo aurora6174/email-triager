@@ -1,0 +1,21 @@
+digraph G {
+  fontname="Noto Sans"; node [fontname="Noto Sans", fontsize=11, shape=box, style="rounded,filled", penwidth=1.2]; edge [fontname="Noto Sans", fontsize=9.5, color="#475569", fontcolor="#334155", arrowsize=0.7, penwidth=1.1];
+  rankdir=TB; nodesep=0.3; ranksep=0.32; pad=0.2; bgcolor="transparent";
+  node [width=2.6, fillcolor="white", color="#EA4B71"];
+  s1 [label="① Trigger\nwebhook → 202 Accepted  |  Gmail poll"];
+  s2 [label="② Normalize\n{message_id, sender, subject, body}"];
+  bad [label="Dead letter\nmissing id / sender", fillcolor="#FEE2E2", color="#DC2626", width=1.8];
+  s3 [label="③ Classify\nclassifier service + LLM", color="#2563EB", fillcolor="#EFF6FF"];
+  s4 [label="④ Delivered or\nbeing delivered?", shape=diamond, style="filled", height=0.95];
+  stop [label="Stop\nrouted / delivering", fillcolor="#F1F5F9", color="#64748B", width=1.6];
+  s5 [label="⑤ Flatten + Route\nSwitch on route"];
+  s6 [label="⑥ Deliver\nappend to Sheet tab (3 tries)", color="#059669", fillcolor="#ECFDF5"];
+  s7 [label="⑦ Ack\nmark message routed"];
+  s8 [label="⑧ Notify\nSlack if urgent / high", color="#059669", fillcolor="#ECFDF5"];
+  s9 [label="⑨ Error workflow\nDeadLetter row + Slack alert", fillcolor="#FEE2E2", color="#DC2626"];
+  s1 -> s2; s2 -> bad [label="invalid", color="#DC2626", fontcolor="#DC2626"]; s2 -> s3; s3 -> s4; s4 -> stop [label="yes"]; s4 -> s5 [label="no"];
+  s5 -> s6 [label="5 routes"]; s5 -> s7 [label="archive (spam)", style=dashed]; s6 -> s7; s7 -> s8;
+  s3 -> s9 [label="retries exhausted", style=dashed, color="#DC2626", fontcolor="#DC2626"];
+  s6 -> s9 [label="destination down", style=dashed, color="#DC2626", fontcolor="#DC2626"];
+  {rank=same; s2; bad} {rank=same; s4; stop}
+}

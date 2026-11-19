@@ -1,0 +1,30 @@
+digraph G {
+  fontname="Noto Sans"; node [fontname="Noto Sans", fontsize=11, shape=box, style="rounded,filled", penwidth=1.2]; edge [fontname="Noto Sans", fontsize=9.5, color="#475569", fontcolor="#334155", arrowsize=0.7, penwidth=1.1];
+  rankdir=LR; nodesep=0.35; ranksep=0.55; pad=0.2; bgcolor="transparent"; compound=true;
+  subgraph cluster_in { label="Inputs"; style="rounded,dashed"; color="#94A3B8"; fontcolor="#475569"; fontsize=11;
+    wh [label="Webhook\nX-Webhook-Secret", fillcolor="#F1F5F9", color="#64748B"];
+    gm [label="Gmail Trigger\n(optional)", fillcolor="#F1F5F9", color="#64748B"];
+  }
+  subgraph cluster_n8n { label="n8n  ·  orchestration"; style="rounded,filled"; fillcolor="#FFF1F3"; color="#EA4B71"; fontcolor="#BE123C"; fontsize=12;
+    norm [label="Normalize", fillcolor="white", color="#EA4B71"];
+    cls [label="Classify\n(HTTP, 4 tries)", fillcolor="white", color="#EA4B71"];
+    rt [label="Route\n(Switch)", fillcolor="white", color="#EA4B71", shape=diamond, style="filled", height=0.9];
+    ack [label="Ack routed", fillcolor="white", color="#EA4B71"];
+    err [label="Error workflow", fillcolor="#FEE2E2", color="#DC2626"];
+  }
+  subgraph cluster_svc { label="Classifier service  ·  judgment + state"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#2563EB"; fontcolor="#1D4ED8"; fontsize=12;
+    api [label="FastAPI\n/v1/classify  /ack", fillcolor="white", color="#2563EB"];
+    rules [label="Validation · review rules\nrouting table", fillcolor="white", color="#2563EB"];
+    db [label="SQLite\nidempotency + audit", shape=cylinder, fillcolor="white", color="#2563EB", style="filled"];
+  }
+  llm [label="LLM provider\nClaude  |  OpenAI  |  fake", fillcolor="#F5F3FF", color="#7C3AED", fontcolor="#5B21B6"];
+  subgraph cluster_out { label="Destinations"; style="rounded,filled"; fillcolor="#ECFDF5"; color="#059669"; fontcolor="#047857"; fontsize=12;
+    sheets [label="Google Sheets\nTickets · Billing · Leads\nFeedback · Review · DeadLetter", fillcolor="white", color="#059669"];
+    slack [label="Slack\nurgent · review · failures", fillcolor="white", color="#059669"];
+  }
+  wh -> norm; gm -> norm; norm -> cls; cls -> api [label="POST", dir=both, arrowtail=normal];
+  api -> rules [dir=none]; api -> db [dir=both]; rules -> llm [label="structured\noutput", dir=both];
+  cls -> rt; rt -> sheets; rt -> ack; ack -> api [style=dashed, label="POST /ack", constraint=false];
+  ack -> slack [label="if urgent"];
+  cls -> err [style=dashed, color="#DC2626", fontcolor="#DC2626", label="on failure"]; err -> sheets [style=dashed, color="#DC2626"]; err -> slack [style=dashed, color="#DC2626"];
+}

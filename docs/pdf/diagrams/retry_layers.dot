@@ -1,0 +1,16 @@
+digraph G {
+  fontname="Noto Sans"; node [fontname="Noto Sans", fontsize=11, shape=box, style="rounded,filled", penwidth=1.2]; edge [fontname="Noto Sans", fontsize=9.5, color="#475569", fontcolor="#334155", arrowsize=0.7, penwidth=1.1];
+  rankdir=LR; nodesep=0.3; ranksep=0.5; pad=0.2; bgcolor="transparent"; compound=true;
+  subgraph cluster_l3 { label="Level 3  ·  n8n node retries (Classify ×4 / 5 s, Sheets ×3 / 3 s, Ack ×4 / 3 s)"; style="rounded,filled"; fillcolor="#FFF1F3"; color="#EA4B71"; fontcolor="#BE123C";
+    subgraph cluster_l2 { label="Level 2  ·  classifier: invalid output retried once"; style="rounded,filled"; fillcolor="#EFF6FF"; color="#2563EB"; fontcolor="#1D4ED8";
+      subgraph cluster_l1 { label="Level 1  ·  LLM SDK: 2 retries on 429 / 5xx / network"; style="rounded,filled"; fillcolor="#F5F3FF"; color="#7C3AED"; fontcolor="#5B21B6";
+        call [label="LLM request", fillcolor="white", color="#7C3AED"];
+      }
+    }
+  }
+  ok [label="Success\n→ route, ack", fillcolor="#D1FAE5", color="#059669"];
+  rev [label="Unusable answer\n→ human_review", fillcolor="#FEF3C7", color="#D97706"];
+  dlq [label="All retries spent\n→ Error workflow\nDeadLetter + Slack", fillcolor="#FEE2E2", color="#DC2626"];
+  replay [label="Operator fixes cause,\npresses Retry in n8n\n(safe: idempotent)", fillcolor="#F1F5F9", color="#64748B"];
+  call -> ok [ltail=cluster_l3]; call -> rev [ltail=cluster_l2]; call -> dlq [ltail=cluster_l3, color="#DC2626"]; dlq -> replay -> call [style=dashed, constraint=false];
+}

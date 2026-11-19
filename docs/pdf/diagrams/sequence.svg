@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 572" width="900" height="572" font-family="Noto Sans, DejaVu Sans, sans-serif">
+<defs><marker id="a0F172A" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0F172A"/></marker><marker id="a475569" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker><marker id="aDC2626" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#DC2626"/></marker><marker id="a059669" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#059669"/></marker><marker id="aEA4B71" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#EA4B71"/></marker><marker id="a2563EB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563EB"/></marker><marker id="a7C3AED" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7C3AED"/></marker><marker id="aD97706" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#D97706"/></marker></defs>
+<rect x="6" y="402" width="888" height="150" rx="6" fill="#F8FAFC"/>
+<text x="12" y="415" font-size="9.5" fill="#475569" text-anchor="start" font-weight="600" font-style="normal">DELIVER + ACK + NOTIFY</text>
+<rect x="6" y="136" width="888" height="264" rx="6" fill="#F8FAFC"/>
+<text x="12" y="149" font-size="9.5" fill="#475569" text-anchor="start" font-weight="600" font-style="normal">CLASSIFY</text>
+<rect x="6" y="60" width="888" height="74" rx="6" fill="#F8FAFC"/>
+<text x="12" y="73" font-size="9.5" fill="#475569" text-anchor="start" font-weight="600" font-style="normal">ACCEPT</text>
+<line x1="70" y1="54" x2="70" y2="562" stroke="#94A3B8" stroke-dasharray="4 4"/>
+<rect x="18" y="20" width="104" height="34" rx="8" fill="#F1F5F9" stroke="#475569" stroke-width="1.4"/>
+<text x="70.0" y="41.375" font-size="12.5" fill="#0F172A" text-anchor="middle" font-weight="600" font-style="normal">Sender</text>
+<line x1="194" y1="54" x2="194" y2="562" stroke="#94A3B8" stroke-dasharray="4 4"/>
+<rect x="142" y="20" width="104" height="34" rx="8" fill="#FFF1F3" stroke="#EA4B71" stroke-width="1.4"/>
+<text x="194.0" y="41.375" font-size="12.5" fill="#0F172A" text-anchor="middle" font-weight="600" font-style="normal">n8n</text>
+<line x1="318" y1="54" x2="318" y2="562" stroke="#94A3B8" stroke-dasharray="4 4"/>
+<rect x="266" y="20" width="104" height="34" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4"/>
+<text x="318.0" y="41.375" font-size="12.5" fill="#0F172A" text-anchor="middle" font-weight="600" font-style="normal">Classifier</text>
+<line x1="442" y1="54" x2="442" y2="562" stroke="#94A3B8" stroke-dasharray="4 4"/>
+<rect x="390" y="20" width="104" height="34" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4"/>
+<text x="442.0" y="41.375" font-size="12.5" fill="#0F172A" text-anchor="middle" font-weight="600" font-style="normal">SQLite</text>
+<line x1="566" y1="54" x2="566" y2="562" stroke="#94A3B8" stroke-dasharray="4 4"/>
+<rect x="514" y="20" width="104" height="34" rx="8" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.4"/>
+<text x="566.0" y="41.375" font-size="12.5" fill="#0F172A" text-anchor="middle" font-weight="600" font-style="normal">LLM</text>
+<line x1="690" y1="54" x2="690" y2="562" stroke="#94A3B8" stroke-dasharray="4 4"/>
+<rect x="638" y="20" width="104" height="34" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="1.4"/>
+<text x="690.0" y="41.375" font-size="12.5" fill="#0F172A" text-anchor="middle" font-weight="600" font-style="normal">Sheets</text>
+<line x1="814" y1="54" x2="814" y2="562" stroke="#94A3B8" stroke-dasharray="4 4"/>
+<rect x="762" y="20" width="104" height="34" rx="8" fill="#ECFDF5" stroke="#059669" stroke-width="1.4"/>
+<text x="814.0" y="41.375" font-size="12.5" fill="#0F172A" text-anchor="middle" font-weight="600" font-style="normal">Slack</text>
+<line x1="74" y1="82" x2="190" y2="82" stroke="#0F172A" stroke-width="1.3" marker-end="url(#a0F172A)"/>
+<text x="132.0" y="76" font-size="11" fill="#0F172A" text-anchor="middle" font-weight="normal" font-style="normal">POST /webhook/email-triage</text>
+<line x1="190" y1="120" x2="74" y2="120" stroke="#475569" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#a475569)"/>
+<text x="132.0" y="114" font-size="11" fill="#475569" text-anchor="middle" font-weight="normal" font-style="normal">202 Accepted (immediately)</text>
+<line x1="198" y1="158" x2="314" y2="158" stroke="#0F172A" stroke-width="1.3" marker-end="url(#a0F172A)"/>
+<text x="256.0" y="152" font-size="11" fill="#0F172A" text-anchor="middle" font-weight="normal" font-style="normal">POST /v1/classify</text>
+<line x1="322" y1="196" x2="438" y2="196" stroke="#0F172A" stroke-width="1.3" marker-end="url(#a0F172A)"/>
+<text x="380.0" y="190" font-size="11" fill="#0F172A" text-anchor="middle" font-weight="normal" font-style="normal">claim message_id → processing</text>
+<line x1="322" y1="234" x2="562" y2="234" stroke="#0F172A" stroke-width="1.3" marker-end="url(#a0F172A)"/>
+<text x="442.0" y="228" font-size="11" fill="#0F172A" text-anchor="middle" font-weight="normal" font-style="normal">system prompt + &lt;email&gt; + JSON schema</text>
+<line x1="562" y1="272" x2="322" y2="272" stroke="#7C3AED" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#a7C3AED)"/>
+<text x="442.0" y="266" font-size="11" fill="#7C3AED" text-anchor="middle" font-weight="normal" font-style="normal">{category, priority, confidence, …}</text>
+<path d="M318,302 h34 v16 h-32" fill="none" stroke="#2563EB" stroke-width="1.3" marker-end="url(#a2563EB)"/>
+<text x="360" y="314" font-size="11.5" fill="#2563EB" text-anchor="start" font-weight="600" font-style="normal">validate · review rules · route</text>
+<line x1="322" y1="348" x2="438" y2="348" stroke="#0F172A" stroke-width="1.3" marker-end="url(#a0F172A)"/>
+<text x="380.0" y="342" font-size="11" fill="#0F172A" text-anchor="middle" font-weight="normal" font-style="normal">save → classified (+ lease)</text>
+<line x1="314" y1="386" x2="198" y2="386" stroke="#2563EB" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#a2563EB)"/>
+<text x="256.0" y="380" font-size="11" fill="#2563EB" text-anchor="middle" font-weight="normal" font-style="normal">200 {route, notify, needs_review, …}</text>
+<line x1="198" y1="424" x2="686" y2="424" stroke="#0F172A" stroke-width="1.3" marker-end="url(#a0F172A)"/>
+<text x="442.0" y="418" font-size="11" fill="#0F172A" text-anchor="middle" font-weight="normal" font-style="normal">append row to route&#x27;s tab</text>
+<line x1="198" y1="462" x2="314" y2="462" stroke="#0F172A" stroke-width="1.3" marker-end="url(#a0F172A)"/>
+<text x="256.0" y="456" font-size="11" fill="#0F172A" text-anchor="middle" font-weight="normal" font-style="normal">POST /v1/messages/{id}/ack</text>
+<line x1="322" y1="500" x2="438" y2="500" stroke="#0F172A" stroke-width="1.3" marker-end="url(#a0F172A)"/>
+<text x="380.0" y="494" font-size="11" fill="#0F172A" text-anchor="middle" font-weight="normal" font-style="normal">status → routed</text>
+<line x1="198" y1="538" x2="810" y2="538" stroke="#059669" stroke-width="1.3" marker-end="url(#a059669)"/>
+<text x="504.0" y="532" font-size="11" fill="#059669" text-anchor="middle" font-weight="normal" font-style="normal">alert (only if urgent / high)</text>
+</svg>

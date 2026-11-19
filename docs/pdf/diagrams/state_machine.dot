@@ -1,0 +1,16 @@
+digraph G {
+  fontname="Noto Sans"; node [fontname="Noto Sans", fontsize=11, shape=box, style="rounded,filled", penwidth=1.2]; edge [fontname="Noto Sans", fontsize=9.5, color="#475569", fontcolor="#334155", arrowsize=0.7, penwidth=1.1];
+  rankdir=LR; nodesep=0.5; ranksep=0.9; pad=0.2; bgcolor="transparent";
+  start [shape=circle, label="", width=0.22, style=filled, fillcolor="#334155", color="#334155"];
+  gone [shape=doublecircle, label="", width=0.18, style=filled, fillcolor="#334155", color="#334155"];
+  p [label="processing\n(claim held)", fillcolor="#FEF3C7", color="#D97706", width=1.6];
+  c [label="classified\n(result stored)", fillcolor="#DBEAFE", color="#2563EB", width=1.6];
+  r [label="routed\n(delivered)", fillcolor="#D1FAE5", color="#059669", width=1.6];
+  start -> p [label="new message_id"];
+  p -> c [label="LLM answer\nvalidated + saved"];
+  p -> gone [label="failure:\nclaim released", color="#DC2626", fontcolor="#DC2626"];
+  p -> p [label="claim older than 180 s\n→ taken over"];
+  c -> r [label="n8n ack"];
+  c -> c [label="copy inside 120 s lease → \"delivering\", n8n stops\ncopy after lease → new lease, n8n delivers"];
+  r -> r [label="redelivery:\nn8n stops"];
+}

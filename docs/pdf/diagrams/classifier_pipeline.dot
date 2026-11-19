@@ -1,0 +1,25 @@
+digraph G {
+  fontname="Noto Sans"; node [fontname="Noto Sans", fontsize=11, shape=box, style="rounded,filled", penwidth=1.2]; edge [fontname="Noto Sans", fontsize=9.5, color="#475569", fontcolor="#334155", arrowsize=0.7, penwidth=1.1];
+  rankdir=TB; nodesep=0.3; ranksep=0.3; pad=0.2; bgcolor="transparent";
+  node [fillcolor="white", color="#2563EB", width=2.7];
+  req [label="POST /v1/classify", shape=box, fillcolor="#DBEAFE"];
+  claim [label="1  Idempotency claim\nSQLite BEGIN IMMEDIATE", shape=diamond, style=filled, height=1.0, width=2.6];
+  dup [label="Return stored result\nduplicate: true  (no LLM call)", fillcolor="#F1F5F9", color="#64748B"];
+  e409 [label="409 in progress\nRetry-After: 5", fillcolor="#FEF3C7", color="#D97706"];
+  e422 [label="422 id reused\nwith other content", fillcolor="#FEE2E2", color="#DC2626"];
+  guard [label="2  Input guards\ntruncate > 12k chars · empty → review"];
+  prompt [label="3  Prompt assembly\nsystem prompt + <email> data block"];
+  llm [label="4  LLM call · JSON schema enforced", color="#7C3AED", fillcolor="#F5F3FF"];
+  e503 [label="503 provider down\nclaim released", fillcolor="#FEE2E2", color="#DC2626"];
+  val [label="5  Pydantic validation", shape=diamond, style=filled, height=0.9];
+  fb [label="Fallback label\nreason: llm_output_invalid", fillcolor="#FEF3C7", color="#D97706"];
+  rules [label="6  Review rules\nconfidence · other · injection"];
+  route [label="7  Routing table\ncategory → route, notify flag"];
+  save [label="8  Persist (classified) + log\n(no email body in logs)", shape=box];
+  claim -> dup [label="known"]; claim -> e409 [label="claimed now"]; claim -> e422 [label="hash differs"];
+  req -> claim; claim -> guard [label="new"]; guard -> prompt -> llm -> val;
+  llm -> e503 [label="429 / 5xx / timeout\nafter SDK retries", color="#DC2626", fontcolor="#DC2626"];
+  val -> rules [label="valid"]; val -> llm [label="invalid: retry once", style=dashed, constraint=false]; val -> fb [label="still invalid"]; fb -> rules;
+  rules -> route -> save;
+  {rank=same; guard; dup; e409; e422} {rank=same; llm; e503} {rank=same; val; fb}
+}
